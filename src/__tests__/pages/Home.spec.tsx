@@ -1,12 +1,9 @@
-
-
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { GetStaticPropsContext } from 'next';
-import { ParsedUrlQuery } from 'querystring';
 import { RouterContext } from 'next/dist/next-server/lib/router-context';
-
-import { getPrismicClient } from '../../services/prismic';
+import { ParsedUrlQuery } from 'querystring';
 import App, { getStaticProps } from '../../pages';
+import { getPrismicClient } from '../../services/prismic';
 
 interface Post {
   uid?: string;
@@ -31,7 +28,7 @@ interface GetStaticPropsResult {
   props: HomeProps;
 }
 
-const mockedGetByTypeReturn = {
+const mockedQueryReturn = {
   next_page: 'link',
   results: [
     {
@@ -81,8 +78,8 @@ describe('Home', () => {
     };
 
     mockedPrismic.mockReturnValue({
-      getByType: () => {
-        return Promise.resolve(mockedGetByTypeReturn);
+      query: () => {
+        return Promise.resolve(mockedQueryReturn);
       },
     });
 
@@ -109,7 +106,7 @@ describe('Home', () => {
   });
 
   it('should be able to return prismic posts documents using getStaticProps', async () => {
-    const postsPaginationReturn = mockedGetByTypeReturn;
+    const postsPaginationReturn = mockedQueryReturn;
 
     const getStaticPropsContext: GetStaticPropsContext<ParsedUrlQuery> = {};
 
@@ -117,19 +114,19 @@ describe('Home', () => {
       getStaticPropsContext
     )) as GetStaticPropsResult;
 
-    expect(response.props.postsPagination.next_page).toEqual(
-      postsPaginationReturn.next_page
-    );
-    expect(response.props.postsPagination.results).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining(postsPaginationReturn.results[0]),
-        expect.objectContaining(postsPaginationReturn.results[1]),
-      ])
-    );
+    expect(response.props.postsPagination).toEqual(postsPaginationReturn);
+  });
+
+  it('should be able to render logo', () => {
+    const postsPagination = mockedQueryReturn;
+
+    render(<App postsPagination={postsPagination} />);
+
+    screen.getByAltText('logo');
   });
 
   it('should be able to render posts documents info', () => {
-    const postsPagination = mockedGetByTypeReturn;
+    const postsPagination = mockedQueryReturn;
 
     render(<App postsPagination={postsPagination} />);
 
@@ -147,7 +144,7 @@ describe('Home', () => {
   });
 
   it('should be able to navigate to post page after a click', () => {
-    const postsPagination = mockedGetByTypeReturn;
+    const postsPagination = mockedQueryReturn;
 
     render(<App postsPagination={postsPagination} />, {
       wrapper: RouterWrapper,
@@ -174,7 +171,7 @@ describe('Home', () => {
   });
 
   it('should be able to load more posts if available', async () => {
-    const postsPagination = { ...mockedGetByTypeReturn };
+    const postsPagination = { ...mockedQueryReturn };
     postsPagination.results = [
       {
         uid: 'como-utilizar-hooks',
@@ -205,7 +202,7 @@ describe('Home', () => {
   });
 
   it('should not be able to load more posts if not available', async () => {
-    const postsPagination = mockedGetByTypeReturn;
+    const postsPagination = mockedQueryReturn;
     postsPagination.next_page = null;
 
     render(<App postsPagination={postsPagination} />);
